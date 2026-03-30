@@ -91,22 +91,74 @@ python main.py ask "What is this PDF about?" --k 5 --vector-db both
 - `--k` controls top matching chunks.
 - `--vector-db` selects retrieval source (`faiss`, `chroma`, `both`).
 
-## How flow works internally
+## Flow diagram
 
-1. `ingest` command
-- Reads all PDF pages.
-- Cleans text (`_clean_text`).
-- Splits text into overlapping chunks (`_chunk_text`, size 1200, overlap 200).
-- Generates embeddings for each chunk (`_embed`).
-- Stores vectors in selected DB(s): FAISS, ChromaDB, or both.
+```mermaid
+flowchart LR
+    Start([Start CLI]) --> Env[Load .env and GEMINI_API_KEY]
+    Env --> Cmd{Command}
 
-2. `ask` command
-- Embeds your question once.
-- Retrieves top-k chunks from selected DB(s).
-- If `both`, merges and de-duplicates results.
-- Builds context prompt from retrieved chunks.
-- Sends prompt to Gemini chat model.
-- Prints final answer in terminal.
+    subgraph IngestPath["Ingest Path"]
+        direction LR
+        I1[Read PDF] --> I2[Clean + Chunk Text]
+        I2 --> I3[Generate Embeddings]
+        I3 --> I4{--vector-db}
+        I4 -->|faiss| IF[Save index.faiss + chunks.json]
+        I4 -->|chroma| IC[Save Chroma collection]
+        I4 -->|both| IB[Save to FAISS + Chroma]
+    end
+
+    subgraph AskPath["Ask Path"]
+        direction LR
+        A1[Embed Question Once] --> A2{--vector-db}
+        A2 -->|faiss| AF[Top-k from FAISS]
+        A2 -->|chroma| AC[Top-k from Chroma]
+        A2 -->|both| AB[Top-k from both stores]
+        AB --> AD[Merge + De-duplicate]
+        AF --> AP[Build Prompt Context]
+        AC --> AP
+        AD --> AP
+        AP --> LLM[Gemini Chat Completion]
+        LLM --> Out([Answer Output])
+    end
+
+    Cmd -->|ingest| I1
+    Cmd -->|ask| A1
+
+    classDef start fill:#0f172a,color:#ffffff,stroke:#0f172a,stroke-width:1px;
+    classDef process fill:#e0f2fe,color:#0c4a6e,stroke:#38bdf8,stroke-width:1px;
+    classDef decision fill:#fef9c3,color:#713f12,stroke:#facc15,stroke-width:1px;
+    classDef store fill:#dcfce7,color:#14532d,stroke:#4ade80,stroke-width:1px;
+    classDef output fill:#ede9fe,color:#4c1d95,stroke:#a78bfa,stroke-width:1px;
+
+    class Start,Out start;
+    class Env,I1,I2,I3,A1,AP,LLM process;
+    class Cmd,I4,A2 decision;
+    class IF,IC,IB,AF,AC,AB,AD store;
+    class Out output;
+```
+
+## Flow explanation
+
+1. Startup
+- App starts from `main.py`.
+- It reads local `.env` and loads `GEMINI_API_KEY`.
+
+2. Ingest path (`ingest`)
+- Extract text from PDF using `pypdf`.
+- Clean and split text into chunks.
+- Generate embeddings for chunks.
+- Save vectors based on `--vector-db`:
+  - `faiss`: saves `index.faiss` + `chunks.json`
+  - `chroma`: saves Chroma persistent collection
+  - `both`: saves to both stores
+
+3. Ask path (`ask`)
+- Embed the user question one time.
+- Retrieve top-k matches from selected store(s).
+- If `both`, combine both result lists and remove duplicates.
+- Build context prompt from retrieved chunks.
+- Send prompt to Gemini model and print final response.
 
 ## Project structure
 
