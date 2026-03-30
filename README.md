@@ -1,4 +1,4 @@
-# agenic-ai-rag
+# agentci-ai-rag-with-faiss-and-chroma-db
 
 Simple PDF RAG (Retrieval-Augmented Generation) CLI app with FAISS + ChromaDB.
 
@@ -25,8 +25,8 @@ It uses:
 ### 1. Clone repo
 
 ```bash
-git clone https://github.com/gopal-py07/agenic-ai-rag.git
-cd agenic-ai-rag
+git clone https://github.com/gopal-py07/agentci-ai-rag-with-faiss-and-chroma-db.git
+cd agentci-ai-rag-with-faiss-and-chroma-db
 ```
 
 ### 2. Install dependencies
@@ -43,18 +43,10 @@ Or using `pip`:
 pip install -e .
 ```
 
-### 3. Set environment variable
+### 3. Create local `.env`
 
-PowerShell:
-
-```powershell
-$env:GEMINI_API_KEY="your_api_key_here"
-```
-
-Command Prompt:
-
-```cmd
-set GEMINI_API_KEY=your_api_key_here
+```env
+GEMINI_API_KEY=your_api_key_here
 ```
 
 ## How to run
