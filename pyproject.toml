@@ -1,0 +1,12 @@
+[project]
+name = "agenic-ai"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "chromadb>=1.5.5",
+    "faiss-cpu>=1.13.2",
+    "openai>=2.30.0",
+    "pypdf>=6.9.2",
+]
