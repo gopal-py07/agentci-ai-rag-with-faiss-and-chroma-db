@@ -8,3 +8,14 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Local env files
+.env
+.env.*
+!.env.example
+
+# Local notes
+GIT_NOTES.md
+
+# Local vector db runtime files
+rag_store/chroma/

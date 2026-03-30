@@ -1,18 +1,19 @@
-# agenic-ai
+# agenic-ai-rag
 
-Simple PDF RAG (Retrieval-Augmented Generation) CLI app.
+Simple PDF RAG (Retrieval-Augmented Generation) CLI app with FAISS + ChromaDB.
 
 ## What this project does
 
 This project lets you:
-1. Ingest a PDF file into a local vector store.
+1. Ingest a PDF file into vector storage.
 2. Ask questions about that PDF.
-3. Get answers generated from retrieved PDF chunks.
+3. Compare retrieval behavior using `faiss`, `chroma`, or `both`.
 
 It uses:
 - `pypdf` for reading PDF text
 - `openai` client with Google Gemini OpenAI-compatible endpoint
 - `faiss` for local vector search
+- `chromadb` for persistent vector search
 
 ## Prerequisites
 
@@ -24,8 +25,8 @@ It uses:
 ### 1. Clone repo
 
 ```bash
-git clone https://github.com/gopal-py07/agenic-ai.git
-cd agenic-ai
+git clone https://github.com/gopal-py07/agenic-ai-rag.git
+cd agenic-ai-rag
 ```
 
 ### 2. Install dependencies
@@ -60,27 +61,43 @@ set GEMINI_API_KEY=your_api_key_here
 
 ### Step 1: Ingest a PDF
 
+Recommended:
+
 ```bash
-python main.py ingest --pdf "path/to/your-file.pdf"
+python main.py ingest --pdf "path/to/your-file.pdf" --vector-db both
+```
+
+Vector DB options:
+
+```bash
+python main.py ingest --pdf "path/to/your-file.pdf" --vector-db faiss
+python main.py ingest --pdf "path/to/your-file.pdf" --vector-db chroma
+python main.py ingest --pdf "path/to/your-file.pdf" --vector-db both
 ```
 
 This creates/updates:
-- `rag_store/index.faiss` (vector index)
-- `rag_store/chunks.json` (text chunks)
+- `rag_store/index.faiss` (FAISS index)
+- `rag_store/chunks.json` (chunk text for FAISS)
+- `rag_store/chroma/` (ChromaDB persistent store)
 
 ### Step 2: Ask a question
 
-```bash
-python main.py ask "What is this PDF about?"
-```
-
-Optional:
+Recommended:
 
 ```bash
-python main.py ask "What is this PDF about?" --k 5
+python main.py ask "What is this PDF about?" --vector-db both
 ```
 
-`--k` controls how many top matching chunks are used as context.
+Examples:
+
+```bash
+python main.py ask "What is this PDF about?" --k 5 --vector-db faiss
+python main.py ask "What is this PDF about?" --k 5 --vector-db chroma
+python main.py ask "What is this PDF about?" --k 5 --vector-db both
+```
+
+- `--k` controls top matching chunks.
+- `--vector-db` selects retrieval source (`faiss`, `chroma`, `both`).
 
 ## How flow works internally
 
@@ -89,14 +106,13 @@ python main.py ask "What is this PDF about?" --k 5
 - Cleans text (`_clean_text`).
 - Splits text into overlapping chunks (`_chunk_text`, size 1200, overlap 200).
 - Generates embeddings for each chunk (`_embed`).
-- Normalizes vectors and stores them in FAISS index.
-- Saves chunks + index to `rag_store/`.
+- Stores vectors in selected DB(s): FAISS, ChromaDB, or both.
 
 2. `ask` command
-- Loads FAISS index and chunk list from `rag_store/`.
-- Embeds your question.
-- Finds top-k similar chunks using vector search.
-- Builds a context prompt from those chunks.
+- Embeds your question once.
+- Retrieves top-k chunks from selected DB(s).
+- If `both`, merges and de-duplicates results.
+- Builds context prompt from retrieved chunks.
 - Sends prompt to Gemini chat model.
 - Prints final answer in terminal.
 
@@ -104,12 +120,13 @@ python main.py ask "What is this PDF about?" --k 5
 
 ```text
 .
-├── main.py
-├── pyproject.toml
-├── uv.lock
-└── rag_store/
-    ├── chunks.json
-    └── index.faiss
+|-- main.py
+|-- pyproject.toml
+|-- uv.lock
+`-- rag_store/
+    |-- chunks.json
+    |-- index.faiss
+    `-- chroma/
 ```
 
 ## Common errors
