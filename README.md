@@ -15,6 +15,52 @@ It uses:
 - `faiss` for local vector search
 - `chromadb` for persistent vector search
 
+## What is actual RAG?
+
+RAG means **Retrieval-Augmented Generation**.
+
+It has two parts:
+1. Retrieval: find the most relevant chunks from your knowledge base (PDF chunks).
+2. Generation: give those chunks to the LLM so it answers using that context.
+
+Without RAG, the model answers only from its general training.  
+With RAG, the model answers using your project-specific document data.
+
+### RAG Q&A
+
+1. What is the "knowledge base" here?
+- The chunked PDF text stored in FAISS and/or ChromaDB.
+
+2. Why do we create embeddings?
+- To convert text into vectors so similarity search can find relevant chunks.
+
+3. Why chunk text?
+- Smaller chunks improve retrieval precision and reduce prompt noise.
+
+4. What does `--vector-db both` do?
+- It retrieves from FAISS + Chroma, merges results, removes duplicates, then sends final context to the LLM.
+
+5. Where does the final answer come from?
+- Gemini model generates the answer, but grounded by retrieved chunk context.
+
+### RAG flow diagram (Q -> A path)
+
+```mermaid
+flowchart TD
+    Q[User Question] --> QE[Question Embedding]
+    QE --> R{Retrieve from DB}
+    R -->|faiss| RF[Top-k chunks from FAISS]
+    R -->|chroma| RC[Top-k chunks from Chroma]
+    R -->|both| RB[Top-k from FAISS + Chroma]
+    RB --> M[Merge + De-duplicate]
+    RF --> C[Build Context Block]
+    RC --> C
+    M --> C
+    C --> P[Prompt = Context + Question]
+    P --> L[Gemini LLM Generation]
+    L --> A[Grounded Answer]
+```
+
 ## Prerequisites
 
 1. Python `3.14+` (as defined in `pyproject.toml`)
